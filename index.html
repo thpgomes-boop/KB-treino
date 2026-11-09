@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KB Tactical Trainer 16kg</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .tab-active { border-bottom: 3px solid #f59e0b; color: #f59e0b; font-weight: 700; }
+    @keyframes kb-swing {
+      0%, 100% { transform: rotate(-35deg) translateY(10px); }
+      50% { transform: rotate(45deg) translateY(-25px); }
+    }
+    @keyframes kb-squat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(28px); }
+    }
+    @keyframes kb-press {
+      0%, 100% { transform: translateY(10px); }
+      50% { transform: translateY(-35px); }
+    }
+    .anim-swing { animation: kb-swing 1.6s infinite ease-in-out; transform-origin: center top; }
+    .anim-squat { animation: kb-squat 2s infinite ease-in-out; }
+    .anim-press { animation: kb-press 1.8s infinite ease-in-out; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col pb-20">
+
+  <!-- Top Header -->
+  <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-20">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center font-black text-slate-950">16</div>
+      <div>
+        <h1 class="font-bold text-lg leading-none">KB Tactical</h1>
+        <span id="wake-status" class="text-xs text-slate-400">Tela normal</span>
+      </div>
+    </div>
+    <button onclick="openConfigModal()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700">
+      ⚙️ Drive / GIFs
+    </button>
+  </header>
+
+  <!-- Banner de Alerta Segunda/Quinta -->
+  <div id="measure-banner" class="hidden bg-amber-500/20 border-b border-amber-500/40 px-4 py-2 text-xs text-amber-300 flex justify-between items-center">
+    <span>📏 Hoje é dia oficial de aferição corporal (Seg/Qui)!</span>
+    <button onclick="switchTab('medidas')" class="underline font-bold">Registrar agora</button>
+  </div>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-4 max-w-lg mx-auto w-full">
+
+    <!-- ABA 1: TREINO DO DIA -->
+    <section id="tab-treino" class="space-y-4">
+      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <span id="day-badge" class="text-xs uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold">Foco do Dia</span>
+            <h2 id="workout-title" class="text-xl font-bold mt-1">Cadeia Posterior & Explosão</h2>
+          </div>
+          <select id="workout-Focus-select" onchange="generateDailyWorkout()" class="bg-slate-900 text-xs border border-slate-700 rounded-lg p-2">
+            <option value="auto">Automático (Dia)</option>
+            <option value="A">Treino A (Posterior/Explosão)</option>
+            <option value="B">Treino B (Inferiores/Ombro/Core)</option>
+            <option value="C">Protocolo Tabata (Alta Intensidade)</option>
+          </select>
+        </div>
+
+        <!-- Seleção de Tempo -->
+        <div class="grid grid-cols-3 gap-2 mb-3">
+          <button onclick="setDuration(20)" id="dur-20" class="dur-btn py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm font-semibold">20 min (5x)</button>
+          <button onclick="setDuration(24)" id="dur-24" class="dur-btn py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-sm">24 min (6x)</button>
+          <button onclick="setDuration(28)" id="dur-28" class="dur-btn py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm font-semibold">28 min (7x)</button>
+        </div>
+
+        <div id="exercise-preview-list" class="space-y-2 text-sm text-slate-300 border-t border-slate-700 pt-3"></div>
+      </div>
+
+      <!-- Visor Animado + Cronômetro EMOM -->
+      <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 text-center relative overflow-hidden">
+        <div class="text-xs uppercase tracking-widest text-slate-400 mb-1" id="current-round-label">PRONTO PARA INICIAR</div>
+        <div class="text-2xl font-extrabold text-amber-400 mb-1" id="current-ex-name">Selecione Iniciar</div>
+        <div class="text-sm text-slate-300 mb-4" id="current-ex-reps">Meta: --</div>
+
+        <!-- Área do GIF / Animação do Cara Treinando -->
+        <div class="w-48 h-48 mx-auto bg-slate-800/60 rounded-xl flex items-center justify-center border border-slate-700/60 mb-4 overflow-hidden" id="visual-container">
+          <div id="svg-trainer" class=" flex flex-col items-center justify-center">
+            <!-- Boneco treinando em SVG animado -->
+            <svg width="120" height="140" viewBox="0 0 120 140" fill="none">
+              <circle cx="60" cy="24" r="12" fill="#f59e0b"/>
+              <path d="M60 38 L60 80 M60 80 L40 125 M60 80 L80 125" stroke="#e2e8f0" stroke-width="8" stroke-linecap="round"/>
+              <g id="kb-arm" class="anim-swing">
+                <path d="M60 45 L60 85" stroke="#f59e0b" stroke-width="7" stroke-linecap="round"/>
+                <circle cx="60" cy="98" r="14" fill="#0f172a" stroke="#f59e0b" stroke-width="5"/>
+                <text x="53" y="102" fill="#f59e0b" font-size="10" font-weight="bold">16</text>
+              </g>
+            </svg>
+          </div>
+          <img id="custom-gif-img" src="" class="hidden w-full h-full object-cover" alt="Demonstração">
+        </div>
+
+        <!-- Relógio Principal -->
+        <div class="text-6xl font-black tracking-tighter font-mono my-2" id="timer-display">00:00</div>
+        <div class="text-xs text-slate-400 mb-5">Tempo Total Restante: <span id="total-remaining" class="font-mono text-slate-200">24:00</span></div>
+
+        <!-- Controles do Treino -->
+        <div class="flex gap-3">
+          <button id="btn-start" onclick="toggleWorkout()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-xl text-lg transition">
+            ▶ INICIAR TREINO
+          </button>
+          <button onclick="finishWorkoutEarly()" id="btn-finish" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 rounded-xl">
+            ✓ Concluir
+          </button>
+        </div>
+      </div>
+
+      <!-- Registro Rápido Pós-Treino (Zepp / Natação) -->
+      <div id="post-workout-card" class="hidden bg-slate-800 rounded-xl p-4 border border-emerald-500/50 space-y-3">
+        <h3 class="font-bold text-emerald-400">🏆 Treino Finalizado! Sincronizar c/ Zepp & Natação</h3>
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="text-slate-400">Calorias Kettlebell (kcal)</label>
+            <input type="number" id="log-kcal" placeholder="Ex: 280" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-400">FC Média / Máx (bpm)</label>
+            <input type="text" id="log-hr" placeholder="Ex: 142 / 168" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div class="col-span-2">
+            <label class="text-slate-400">Natação Pós-Treino (Metros nadados - Piscina 20m)</label>
+            <input type="number" id="log-swim" placeholder="Ex: 800" step="40" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+        </div>
+        <button onclick="saveWorkoutToDrive()" class="w-full bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-lg">
+          💾 Salvar no JSON (Google Drive)
+        </button>
+      </div>
+    </section>
+
+    <!-- ABA 2: MEDIDAS CORPORAIS (SEGUNDA E QUINTA) -->
+    <section id="tab-medidas" class="hidden space-y-4">
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-bold text-lg">📏 Check-in Corporal (2x/Semana)</h2>
+          <span class="text-xs bg-slate-900 px-2.5 py-1 rounded text-amber-400" id="bf-preview">BF Est.: --%</span>
+        </div>
+        <p class="text-xs text-slate-400 mb-4">Meça com fita métrica comum às Segundas e Quintas. O cálculo de % de gordura usa o protocolo da Marinha (Altura fixa: 175 cm).</p>
+
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="text-slate-300 font-semibold">Peso (kg) *</label>
+            <input type="number" step="0.1" id="m-peso" oninput="calcNavyBF()" placeholder="96.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-300 font-semibold">Cintura / Umbigo (cm) *</label>
+            <input type="number" step="0.5" id="m-cintura" oninput="calcNavyBF()" placeholder="94.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-300 font-semibold">Pescoço (cm) *</label>
+            <input type="number" step="0.5" id="m-pescoco" oninput="calcNavyBF()" placeholder="41.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-300 font-semibold">Quadril (cm)</label>
+            <input type="number" step="0.5" id="m-quadril" placeholder="102.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-400">Tórax / Peitoral (cm)</label>
+            <input type="number" step="0.5" id="m-torax" placeholder="108.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-400">Ombros (cm)</label>
+            <input type="number" step="0.5" id="m-ombros" placeholder="124.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-400">Braço Dir. Contraído (cm)</label>
+            <input type="number" step="0.5" id="m-braco-d" placeholder="38.5" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-400">Braço Esq. Contraído (cm)</label>
+            <input type="number" step="0.5" id="m-braco-e" placeholder="38.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-400">Antebraço Dir./Esq. (cm)</label>
+            <input type="text" id="m-antebraco" placeholder="30.5 / 30.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div>
+            <label class="text-slate-400">Coxa Dir./Esq. (cm)</label>
+            <input type="text" id="m-coxa" placeholder="60.0 / 59.5" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+          <div class="col-span-2">
+            <label class="text-slate-400">Panturrilha Dir./Esq. (cm)</label>
+            <input type="text" id="m-panturrilha" placeholder="41.0 / 41.0" class="w-full bg-slate-900 border border-slate-700 rounded p-2 mt-1">
+          </div>
+        </div>
+
+        <button onclick="saveMeasurement()" class="w-full mt-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl">
+          📥 Registrar Medidas no Histórico
+        </button>
+      </div>
+
+      <!-- Histórico de Medidas -->
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700">
+        <h3 class="font-bold text-sm mb-3">Evolução Recente</h3>
+        <div id="measurements-history-list" class="space-y-2 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- ABA 3: HISTÓRICO & ZEPP/GOOGLE FIT -->
+    <section id="tab-historico" class="hidden space-y-4">
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 flex justify-between items-center">
+        <div>
+          <h2 class="font-bold text-base">Sincronização Google Fit (Zepp)</h2>
+          <p class="text-xs text-slate-400">Importa sessões de exercícios do Amazfit via Drive Script</p>
+        </div>
+        <button onclick="syncGoogleFit()" class="bg-amber-500 text-slate-950 font-bold text-xs px-3 py-2 rounded-lg">
+          🔄 Sincronizar
+        </button>
+      </div>
+
+      <div id="fit-sessions-box" class="hidden bg-slate-900 rounded-xl p-3 border border-slate-800 text-xs space-y-2"></div>
+
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-bold text-sm">Histórico Completo de Treinos</h3>
+          <button onclick="loadFromDrive()" class="text-xs text-amber-400 underline">Atualizar do Drive</button>
+        </div>
+        <div id="workout-history-list" class="space-y-2 text-xs"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Config URL Apps Script & Links de GIFs -->
+  <div id="config-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h3 class="font-bold text-lg">⚙️ Conexão Google Drive & GIFs</h3>
+      <div class="text-xs space-y-2">
+        <label class="block text-slate-300 font-semibold">URL do Web App (Google Apps Script):</label>
+        <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-700 rounded p-2">
+      </div>
+      <div class="text-xs space-y-2 border-t border-slate-700 pt-3">
+        <p class="font-semibold text-amber-400">Links de GIFs Personalizados (Opcional):</p>
+        <p class="text-slate-400">Cole links diretos de GIFs (ex: do GitHub Free-Exercise-DB ou MuscleWiki). Se vazio, o app usa a animação nativa.</p>
+        <input type="url" id="gif-deadlift" placeholder="URL GIF Deadlift" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5">
+        <input type="url" id="gif-swing" placeholder="URL GIF Swing" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5">
+        <input type="url" id="gif-clean" placeholder="URL GIF Clean" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5">
+        <input type="url" id="gif-squat" placeholder="URL GIF Goblet Squat" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5">
+        <input type="url" id="gif-press" placeholder="URL GIF Push Press" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5">
+        <input type="url" id="gif-snatch" placeholder="URL GIF Snatch" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveConfig()" class="flex-1 bg-amber-500 text-slate-950 font-bold py-2 rounded-lg">Salvar</button>
+        <button onclick="closeConfigModal()" class="px-4 bg-slate-700 rounded-lg">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de Navegação Inferior -->
+  <nav class="fixed bottom-0 inset-x-0 bg-slate-900 border-t border-slate-800 flex justify-around text-xs z-20">
+    <button onclick="switchTab('treino')" id="nav-treino" class="flex-1 py-3 text-center tab-active">🔥 Treino</button>
+    <button onclick="switchTab('medidas')" id="nav-medidas" class="flex-1 py-3 text-center text-slate-400">📏 Medidas (2x)</button>
+    <button onclick="switchTab('historico')" id="nav-historico" class="flex-1 py-3 text-center text-slate-400">📊 Histórico & Zepp</button>
+  </nav>
+
+  <script>
+    // Estado Global
+    let durationMinutes = 24;
+    let currentSequence = [];
+    let timerInterval = null;
+    let isRunning = false;
+    let currentSecond = 0;
+    let totalSeconds = 24 * 60;
+    let wakeLock = null;
+
+    let localDB = JSON.parse(localStorage.getItem('kb_local_db')) || {
+      workouts: [],
+      measurements: [],
+      customGifs: {}
+    };
+
+    // Protocolos baseados no vídeo do Prof. Fábio Leal e nas necessidades levantadas
+    const WORKOUT_TEMPLATES = {
+      A: {
+        title: "Treino A: Cadeia Posterior & Explosão (EMOM)",
+        badge: "Seg / Qua / Sex • 16 kg",
+        cycle: [
+          { id: 'deadlift', name: 'Deadlift (Levantamento Terra)', reps: '18 a 20 repetições', anim: 'anim-squat', voice: 'Minuto um. Levantamento Terra. Dezoito a vinte repetições mantendo a coluna neutra.' },
+          { id: 'swing', name: 'Kettlebell Swing', reps: '20 repetições explosivas', anim: 'anim-swing', voice: 'Minuto dois. Swing. Vinte repetições com explosão de quadril.' },
+          { id: 'clean', name: 'Clean (Alternando Braços)', reps: '12 repetições (6 cada braço)', anim: 'anim-press', voice: 'Minuto três. Clean. Seis repetições para cada braço.' },
+          { id: 'rest', name: 'Descanso Ativo / Recuperação', reps: 'Respire fundo e hidrate', anim: '', voice: 'Minuto quatro. Descanso total.Solte a peça e recupere o fôlego.' }
+        ]
+      },
+      B: {
+        title: "Treino B: Inferiores, Ombros & Core (EMOM)",
+        badge: "Ter / Qui / Sáb • 16 kg",
+        cycle: [
+          { id: 'squat', name: 'Goblet Squat (Agachamento)', reps: '15 repetições profundas', anim: 'anim-squat', voice: 'Minuto um. Goblet Squat. Quinze agachamentos segurando a peça no peito.' },
+          { id: 'press', name: 'Push Press Unilateral', reps: '10 repetições (5 cada braço)', anim: 'anim-press', voice: 'Minuto dois. Push Press. Cinco subidas acima da cabeça com cada braço.' },
+          { id: 'swing', name: 'Kettlebell Swing', reps: '15 a 18 repetições', anim: 'anim-swing', voice: 'Minuto três. Swing. Quinze a dezoito repetições fortes.' },
+          { id: 'rest', name: 'Descanso Ativo / Recuperação', reps: 'Respire fundo e hidrate', anim: '', voice: 'Minuto quatro. Descanso total. Prepare-se para a próxima volta.' }
+        ]
+      },
+      C: {
+        title: "Bloco Metabólico: Snatch & Swing (EMOM)",
+        badge: "Desafio de Condicionamento • 16 kg",
+        cycle: [
+          { id: 'snatch', name: 'Snatch Unilateral', reps: '12 repetições (6 cada braço)', anim: 'anim-press', voice: 'Minuto um. Snatch. Seis repetições de cada lado.' },
+          { id: 'squat', name: 'Goblet Squat', reps: '15 repetições', anim: 'anim-squat', voice: 'Minuto dois. Goblet Squat. Quinze repetições.' },
+          { id: 'swing', name: 'Kettlebell Swing', reps: '20 repetições', anim: 'anim-swing', voice: 'Minuto três. Vinte Swings.' },
+          { id: 'rest', name: 'Descanso Total', reps: 'Recuperação de FC', anim: '', voice: 'Minuto quatro. Descanso.' }
+        ]
+      }
+    };
+
+    // Voz em Português (Sem apito, apenas comando falado)
+    function speak(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.lang = 'pt-BR';
+      msg.rate = 1.05;
+      window.speechSynthesis.speak(msg);
+    }
+
+    // Wake Lock (Manter tela sempre acesa)
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          document.getElementById('wake-status').innerText = '🔆 Tela Sempre Acesa Ativa';
+          document.getElementById('wake-status').className = 'text-xs text-emerald-400 font-semibold';
+        }
+      } catch (err) {
+        console.log('WakeLock não suportado ou bloqueado:', err);
+      }
+    }
+
+    // Verifica dia da semana para alerta de medidas (Segunda = 1, Quinta = 4) e seleção automática de treino
+    function initApp() {
+      const today = new Date().getDay();
+      if (today === 1 || today === 4) {
+        document.getElementById('measure-banner').classList.remove('hidden');
+      }
+      document.getElementById('gas-url').value = localStorage.getItem('kb_gas_url') || '';
+      generateDailyWorkout();
+      renderHistory();
+      renderMeasurements();
+      loadFromDrive();
+    }
+
+    function setDuration(mins) {
+      if (isRunning) return;
+      durationMinutes = mins;
+      document.querySelectorAll('.dur-btn').forEach(b => {
+        b.className = 'dur-btn py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm font-semibold';
+      });
+      document.getElementById('dur-' + mins).className = 'dur-btn py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-sm';
+      generateDailyWorkout();
+    }
+
+    function generateDailyWorkout() {
+      const selectVal = document.getElementById('workout-Focus-select').value;
+      const day = new Date().getDay(); // 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+      let key = selectVal;
+      if (key === 'auto') {
+        key = (day === 2 || day === 4 || day === 6) ? 'B' : 'A';
+      }
+      const tpl = WORKOUT_TEMPLATES[key];
+      document.getElementById('workout-title').innerText = tpl.title;
+      document.getElementById('day-badge').innerText = tpl.badge;
+
+      const rounds = durationMinutes / 4;
+      currentSequence = [];
+      for (let r = 1; r <= rounds; r++) {
+        tpl.cycle.forEach((step, idx) => {
+          currentSequence.push({
+            ...step,
+            round: r,
+            totalRounds: rounds,
+            minuteIndex: currentSequence.length + 1
+          });
+        });
+      }
+
+      const listEl = document.getElementById('exercise-preview-list');
+      listEl.innerHTML = tpl.cycle.map((s, i) => `
+        <div class="flex justify-between items-center py-1">
+          <span><strong class="text-amber-400">Min ${i + 1}:</strong> ${s.name}</span>
+          <span class="text-xs text-slate-400">${s.reps}</span>
+        </div>
+      `).join('') + `<div class="text-xs text-amber-300/90 pt-1 font-semibold">↻ Repetir por ${rounds} voltas (${durationMinutes} min totais)</div>`;
+
+      totalSeconds = durationMinutes * 60;
+      currentSecond = 0;
+      updateTimerUI();
+    }
+
+    function updateVisualDemo(step) {
+      const customUrl = localDB.customGifs && localDB.customGifs[step.id];
+      const gifImg = document.getElementById('custom-gif-img');
+      const svgTrainer = document.getElementById('svg-trainer');
+      const arm = document.getElementById('kb-arm');
+
+      if (customUrl) {
+        gifImg.src = customUrl;
+        gifImg.classList.remove('hidden');
+        svgTrainer.classList.add('hidden');
+      } else {
+        gifImg.classList.add('hidden');
+        svgTrainer.classList.remove('hidden');
+        arm.className.baseVal = step.anim || '';
+      }
+    }
+
+    function toggleWorkout() {
+      const btn = document.getElementById('btn-start');
+      const btnFinish = document.getElementById('btn-finish');
+
+      if (!isRunning) {
+        isRunning = true;
+        requestWakeLock();
+        btn.innerText = '⏸ PAUSAR';
+        btn.className = 'flex-1 bg-slate-700 hover:bg-slate-600 text-white font-black py-3.5 rounded-xl text-lg transition';
+        btnFinish.classList.remove('hidden');
+
+        if (currentSecond === 0) {
+          triggerMinuteStep(0);
+        }
+        timerInterval = setInterval(tickSecond, 1000);
+      } else {
+        isRunning = false;
+        clearInterval(timerInterval);
+        btn.innerText = '▶ RETOMAR';
+        btn.className = 'flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 rounded-xl text-lg transition';
+      }
+    }
+
+    function tickSecond() {
+      currentSecond++;
+      if (currentSecond >= totalSeconds) {
+        finishWorkoutEarly();
+        speak('Treino concluído, Capitão! Excelente trabalho. Hora da natação.');
+        return;
+      }
+
+      const secInMinute = currentSecond % 60;
+      if (secInMinute === 0) {
+        const stepIdx = Math.floor(currentSecond / 60);
+        triggerMinuteStep(stepIdx);
+      } else if (secInMinute === 30) {
+        const stepIdx = Math.floor(currentSecond / 60);
+        const step = currentSequence[stepIdx];
+        if (step && (step.id === 'clean' || step.id === 'press' || step.id === 'snatch')) {
+          speak('Trinta segundos. Troque de braço se necessário.');
+        }
+      } else if (secInMinute === 55) {
+        const nextStep = currentSequence[Math.floor(currentSecond / 60) + 1];
+        if (nextStep) {
+          speak('Prepare para ' + nextStep.name);
+        }
+      }
+
+      updateTimerUI();
+    }
+
+    function triggerMinuteStep(idx) {
+      const step = currentSequence[idx];
+      if (!step) return;
+      document.getElementById('current-round-label').innerText = `VOLTA ${step.round} DE ${step.totalRounds} • MINUTO ${step.minuteIndex}/${durationMinutes}`;
+      document.getElementById('current-ex-name').innerText = step.name;
+      document.getElementById('current-ex-reps').innerText = step.reps;
+      updateVisualDemo(step);
+      speak(step.voice);
+    }
+
+    function updateTimerUI() {
+      const secInMinute = 60 - (currentSecond % 60);
+      const dispSec = (currentSecond % 60 === 0) ? 60 : secInMinute;
+      document.getElementById('timer-display').innerText = `00:${String(dispSec === 60 ? 0 : dispSec).padStart(2, '0')}`;
+
+      const rem = totalSeconds - currentSecond;
+      const m = Math.floor(rem / 60);
+      const s = rem % 60;
+      document.getElementById('total-remaining').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function finishWorkoutEarly() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      document.getElementById('btn-start').innerText = '▶ REINICIAR';
+      document.getElementById('post-workout-card').classList.remove('hidden');
+    }
+
+    // Cálculo de % de Gordura pelo Método da Marinha dos EUA (Altura: 175 cm)
+    function calcNavyBF() {
+      const waist = parseFloat(document.getElementById('m-cintura').value);
+      const neck = parseFloat(document.getElementById('m-pescoco').value);
+      const height = 175;
+      if (waist > neck && neck > 20) {
+        const bf = 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(height)) - 450;
+        document.getElementById('bf-preview').innerText = `BF Est.: ${bf.toFixed(1)}%`;
+        return bf.toFixed(1);
+      }
+      return null;
+    }
+
+    async function saveWorkoutToDrive() {
+      const entry = {
+        date: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
+        workout: document.getElementById('workout-title').innerText,
+        durationMin: Math.ceil(currentSecond / 60) || durationMinutes,
+        kcal: document.getElementById('log-kcal').value || '--',
+        hr: document.getElementById('log-hr').value || '--',
+        swimMeters: document.getElementById('log-swim').value || '0'
+      };
+      localDB.workouts.unshift(entry);
+      localStorage.setItem('kb_local_db', JSON.stringify(localDB));
+      document.getElementById('post-workout-card').classList.add('hidden');
+      renderHistory();
+      await syncWithGAS('save_workout', entry);
+      alert('Treino registrado no histórico!');
+    }
+
+    async function saveMeasurement() {
+      const peso = document.getElementById('m-peso').value;
+      const cintura = document.getElementById('m-cintura').value;
+      if (!peso || !cintura) {
+        alert('Preencha pelo menos o Peso e a Cintura!');
+        return;
+      }
+      const entry = {
+        date: new Date().toLocaleDateString('pt-BR'),
+        peso,
+        cintura,
+        pescoco: document.getElementById('m-pescoco').value || '--',
+        quadril: document.getElementById('m-quadril').value || '--',
+        torax: document.getElementById('m-torax').value || '--',
+        ombros: document.getElementById('m-ombros').value || '--',
+        bracoD: document.getElementById('m-braco-d').value || '--',
+        bracoE: document.getElementById('m-braco-e').value || '--',
+        antebraco: document.getElementById('m-antebraco').value || '--',
+        coxa: document.getElementById('m-coxa').value || '--',
+        panturrilha: document.getElementById('m-panturrilha').value || '--',
+        bf: calcNavyBF() || '--'
+      };
+      localDB.measurements.unshift(entry);
+      localStorage.setItem('kb_local_db', JSON.stringify(localDB));
+      renderMeasurements();
+      await syncWithGAS('save_measurement', entry);
+      alert('Medidas salvas com sucesso!');
+    }
+
+    async function syncWithGAS(action, data) {
+      const url = localStorage.getItem('kb_gas_url');
+      if (!url) return;
+      try {
+        await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify({ action, data })
+        });
+      } catch (e) {
+        console.log('Salvo localmente. Erro ao sincronizar com Drive:', e);
+      }
+    }
+
+    async function loadFromDrive() {
+      const url = localStorage.getItem('kb_gas_url');
+      if (!url) return;
+      try {
+        const res = await fetch(url);
+        const cloudDB = await res.json();
+        if (cloudDB && cloudDB.workouts) {
+          localDB = cloudDB;
+          localStorage.setItem('kb_local_db', JSON.stringify(localDB));
+          renderHistory();
+          renderMeasurements();
+        }
+      } catch (e) {
+        console.log('Usando cache local:', e);
+      }
+    }
+
+    async function syncGoogleFit() {
+      const url = localStorage.getItem('kb_gas_url');
+      if (!url) {
+        alert('Configure primeiro a URL do seu Google Apps Script no botão ⚙️ Drive / GIFs no topo!');
+        return;
+      }
+      const box = document.getElementById('fit-sessions-box');
+      box.classList.remove('hidden');
+      box.innerHTML = '⏳ Buscando atividades do Zepp / Google Fit dos últimos 7 dias...';
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'sync_google_fit', days: 7 })
+        });
+        const json = await res.json();
+        const sessions = (json.fitSessions && json.fitSessions.session) || [];
+        if (sessions.length === 0) {
+          box.innerHTML = 'Nenhuma sessão encontrada nos últimos 7 dias no Google Fit.';
+          return;
+        }
+        box.innerHTML = sessions.map(s => `
+          <div class="p-2 bg-slate-800 rounded border border-slate-700 flex justify-between">
+            <span><strong>${s.name || 'Exercício Zepp'}</strong> (${s.description || 'Sincronizado'})</span>
+            <span class="text-amber-400">${new Date(parseInt(s.startTimeMillis)).toLocaleDateString('pt-BR')}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        box.innerHTML = 'Erro ao consultar Google Fit. Verifique as permissões do Apps Script.';
+      }
+    }
+
+    function renderHistory() {
+      const el = document.getElementById('workout-history-list');
+      if (!localDB.workouts.length) {
+        el.innerHTML = '<p class="text-slate-500">Nenhum treino registrado ainda.</p>';
+        return;
+      }
+      el.innerHTML = localDB.workouts.map(w => `
+        <div class="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+          <div class="flex justify-between font-bold text-amber-400">
+            <span>${w.workout}</span>
+            <span>${w.date}</span>
+          </div>
+          <div class="text-slate-300 flex gap-3">
+            <span>⏱ ${w.durationMin} min</span>
+            <span>🔥 ${w.kcal} kcal</span>
+            <span>❤️ ${w.hr} bpm</span>
+            <span>🏊 ${w.swimMeters}m</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderMeasurements() {
+      const el = document.getElementById('measurements-history-list');
+      if (!localDB.measurements.length) {
+        el.innerHTML = '<p class="text-slate-500">Nenhuma medição registrada ainda.</p>';
+        return;
+      }
+      el.innerHTML = localDB.measurements.map(m => `
+        <div class="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+          <div class="flex justify-between font-bold text-emerald-400">
+            <span>📅 ${m.date}</span>
+            <span>Peso: ${m.peso} kg | BF: ${m.bf}%</span>
+          </div>
+          <div class="text-slate-400 grid grid-cols-3 gap-1 pt-1">
+            <span>Cintura: ${m.cintura}cm</span>
+            <span>Tórax: ${m.torax}cm</span>
+            <span>Ombros: ${m.ombros}cm</span>
+            <span>Braço D/E: ${m.bracoD}/${m.bracoE}</span>
+            <span>Coxa: ${m.coxa}</span>
+            <span>Pant.: ${m.panturrilha}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function switchTab(tab) {
+      ['treino', 'medidas', 'historico'].forEach(t => {
+        document.getElementById('tab-' + t).classList.add('hidden');
+        document.getElementById('nav-' + t).className = 'flex-1 py-3 text-center text-slate-400';
+      });
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+      document.getElementById('nav-' + tab).className = 'flex-1 py-3 text-center tab-active';
+    }
+
+    function openConfigModal() {
+      document.getElementById('config-modal').classList.remove('hidden');
+    }
+    function closeConfigModal() {
+      document.getElementById('config-modal').classList.add('hidden');
+    }
+    function saveConfig() {
+      const url = document.getElementById('gas-url').value.trim();
+      localStorage.setItem('kb_gas_url', url);
+      localDB.customGifs = {
+        deadlift: document.getElementById('gif-deadlift').value.trim(),
+        swing: document.getElementById('gif-swing').value.trim(),
+        clean: document.getElementById('gif-clean').value.trim(),
+        squat: document.getElementById('gif-squat').value.trim(),
+        press: document.getElementById('gif-press').value.trim(),
+        snatch: document.getElementById('gif-snatch').value.trim()
+      };
+      localStorage.setItem('kb_local_db', JSON.stringify(localDB));
+      syncWithGAS('save_gifs', localDB.customGifs);
+      closeConfigModal();
+      loadFromDrive();
+    }
+
+    window.onload = initApp;
+  </script>
+</body>
+</html>
